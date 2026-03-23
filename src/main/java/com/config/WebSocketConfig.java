@@ -12,9 +12,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Native WebSocket only (no SockJS), allow all origins
+        // Allow all origins — safe because this is a public chat app.
+        // For production with auth, restrict to your actual domain.
         registry.addEndpoint("/ws")
-                .setAllowedOrigins("*");
+                .setAllowedOriginPatterns("*");
+
+        registry.addEndpoint("/ws-sockjs")
+                .setAllowedOriginPatterns("*")
+                .withSockJS()
+                .setWebSocketEnabled(true)
+                .setSessionCookieNeeded(false);
     }
 
     @Override
