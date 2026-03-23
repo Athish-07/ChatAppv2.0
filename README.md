@@ -180,8 +180,11 @@ server.port=${PORT:YOUR_PORT}
 ## 📸 Screenshots
 
 | Login Page | Chat Page |
-|<img width="1914" height="910" alt="image" src="https://github.com/user-attachments/assets/9f8515e0-7226-43c6-adba-fb7320e9ba5f" />|
-|<img width="1919" height="901" alt="image" src="https://github.com/user-attachments/assets/4a1eeca1-458d-4b01-a09e-de68646005d2" />|
+
+<img width="1914" height="910" alt="image" src="https://github.com/user-attachments/assets/9f8515e0-7226-43c6-adba-fb7320e9ba5f" />
+
+<img width="1919" height="901" alt="image" src="https://github.com/user-attachments/assets/4a1eeca1-458d-4b01-a09e-de68646005d2" />
+
 | Glassmorphism login card with gradient background | Real-time chat with message bubbles, online counter, timestamps |
 
 ---
