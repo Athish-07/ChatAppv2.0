@@ -12,15 +12,14 @@ var onlineCountEl    = document.querySelector('#onlineCount');
 var youAvatar        = document.querySelector('#youAvatar');
 var charCount        = document.querySelector('#charCount');
 
-var stompClient  = null;
-var username     = null;
-var connected    = false;
-var lastSender   = null;
-var lastDate     = null;
+var stompClient = null;
+var username    = null;
+var lastSender  = null;
+var lastDate    = null;
 
 var colors = ['#6c63ff','#e85d9f','#f97316','#0ea5e9','#22c55e','#a855f7','#ef4444','#14b8a6'];
 
-/* ── CHARACTER COUNTER ───────────────────────────────── */
+/* ── CHARACTER COUNTER ── */
 messageInput.addEventListener('input', function() {
     var len = messageInput.value.length;
     var remaining = 500 - len;
@@ -33,7 +32,7 @@ messageInput.addEventListener('input', function() {
     }
 });
 
-/* ── CONNECT ─────────────────────────────────────────── */
+/* ── CONNECT ── */
 function connect(event) {
     event.preventDefault();
     username = document.querySelector('#name').value.trim();
@@ -46,49 +45,30 @@ function connect(event) {
     usernamePage.classList.add('hidden');
     chatPage.classList.remove('hidden');
 
-    connectNative();
-}
-
-function connectNative() {
-    try {
-        var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        var ws = new WebSocket(wsProtocol + window.location.host + '/ws');
-        var timeout = setTimeout(function() {
-            if (!connected) { ws.close(); connectSockJS(); }
-        }, 3000);
-        ws.onopen = function() {
-            clearTimeout(timeout);
-            stompClient = Stomp.over(ws);
-            stompClient.debug = null;
-            stompClient.connect({}, onConnected, function() {
-                if (!connected) connectSockJS();
-            });
-        };
-        ws.onerror = function() { clearTimeout(timeout); if (!connected) connectSockJS(); };
-        ws.onclose = function() { clearTimeout(timeout); if (!connected) connectSockJS(); };
-    } catch(e) { connectSockJS(); }
-}
-
-function connectSockJS() {
-    var socket = new SockJS('/ws-sockjs');
+    // Always use SockJS — it works on localhost (http) AND Render (https)
+    // SockJS internally uses wss:// when the page is on https://
+    // No native WebSocket fallback needed — SockJS handles everything
+    var sockjsUrl = window.location.protocol + '//' + window.location.host + '/ws-sockjs';
+    var socket = new SockJS(sockjsUrl);
     stompClient = Stomp.over(socket);
     stompClient.debug = null;
     stompClient.connect({}, onConnected, onError);
 }
 
-/* ── CONNECTED ───────────────────────────────────────── */
+/* ── CONNECTED ── */
 function onConnected() {
-    connected = true;
     stompClient.subscribe('/topic/public', onMessageReceived);
     setTimeout(function() {
-        stompClient.send('/app/chat.addUser', {}, JSON.stringify({ sender: username, type: 'JOIN' }));
+        stompClient.send('/app/chat.addUser', {}, JSON.stringify({
+            sender: username, type: 'JOIN'
+        }));
     }, 150);
     connectingBanner.classList.add('hidden');
     headerStatus.textContent = 'Connected';
     headerStatus.classList.add('connected');
 }
 
-/* ── ERROR ───────────────────────────────────────────── */
+/* ── ERROR ── */
 function onError() {
     connectingBanner.classList.remove('hidden');
     connectingBanner.textContent = 'Could not connect. Please refresh and try again.';
@@ -99,7 +79,7 @@ function onError() {
     headerStatus.classList.remove('connected');
 }
 
-/* ── SEND ────────────────────────────────────────────── */
+/* ── SEND ── */
 function sendMessage(event) {
     event.preventDefault();
     var content = messageInput.value.trim();
@@ -113,7 +93,7 @@ function sendMessage(event) {
     }
 }
 
-/* ── RECEIVE ─────────────────────────────────────────── */
+/* ── RECEIVE ── */
 function onMessageReceived(payload) {
     var message = JSON.parse(payload.body);
 
@@ -125,7 +105,7 @@ function onMessageReceived(payload) {
     var li = document.createElement('li');
 
     if (message.type === 'JOIN' || message.type === 'LEAVE') {
-        lastSender = null; // reset grouping on system events
+        lastSender = null;
         li.classList.add('event-message');
         var p = document.createElement('p');
         p.textContent = message.type === 'JOIN'
@@ -136,7 +116,6 @@ function onMessageReceived(payload) {
     } else {
         var isOwn = message.sender === username;
 
-        // Date divider — show once per day
         var dateStr = now.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
         if (dateStr !== lastDate) {
             lastDate = dateStr;
@@ -146,7 +125,6 @@ function onMessageReceived(payload) {
             messageArea.appendChild(divider);
         }
 
-        // Group consecutive messages from same sender
         var isSameSender = (message.sender === lastSender);
         lastSender = message.sender;
 
@@ -154,17 +132,14 @@ function onMessageReceived(payload) {
         if (isOwn) li.classList.add('own-message');
         if (isSameSender) li.classList.add('same-sender');
 
-        // Avatar
         var avatar = document.createElement('i');
         avatar.textContent = (message.sender && message.sender.length > 0)
             ? message.sender[0].toUpperCase() : '?';
         avatar.style.background = getAvatarColor(message.sender || '');
 
-        // Bubble wrap
         var wrap = document.createElement('div');
         wrap.classList.add('bubble-wrap');
 
-        // Sender name (only on first of a group, not own messages)
         if (!isOwn && !isSameSender) {
             var nameEl = document.createElement('span');
             nameEl.className = 'sender-name';
@@ -176,7 +151,6 @@ function onMessageReceived(payload) {
         bubble.textContent = message.content;
         wrap.appendChild(bubble);
 
-        // Time + tick
         var meta = document.createElement('div');
         meta.className = 'msg-meta';
         meta.textContent = formatTime(now);
@@ -196,7 +170,7 @@ function onMessageReceived(payload) {
     messageArea.scrollTop = messageArea.scrollHeight;
 }
 
-/* ── HELPERS ─────────────────────────────────────────── */
+/* ── HELPERS ── */
 function formatTime(date) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
@@ -207,7 +181,7 @@ function getAvatarColor(sender) {
     return colors[Math.abs(hash % colors.length)];
 }
 
-/* ── EVENTS ──────────────────────────────────────────── */
+/* ── EVENTS ── */
 usernameForm.addEventListener('submit', connect, true);
 messageForm.addEventListener('submit', sendMessage, true);
 messageInput.addEventListener('keydown', function(e) {
